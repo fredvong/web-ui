@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lens Catalog</title>
+    <style>
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .select-container {
+            margin: 20px 0;
+        }
+
+        .lens-select {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .lens-details {
+            background-color: #f5f5f5;
+            padding: 20px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+
+        h2 {
+            color: #444;
+            margin-bottom: 15px;
+        }
+
+        p {
+            margin: 8px 0;
+            color: #666;
+        }
+
+        .button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .button:hover {
+            background-color: #45a049;
+        }
+
+        .rendered-image {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .rendered-image img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lens Catalog</h1>
+        
+        <div class="select-container">
+            <select id="lensSelect" class="lens-select">
+                <option value="">Select a lens...</option>
+            </select>
+            <button id="renderButton" class="button" disabled>Render Focal Length</button>
+        </div>
+
+        <div id="lensDetails" class="lens-details" style="display: none;">
+            <h2 id="lensName"></h2>
+            <p id="lensFocalLength"></p>
+            <p id="lensAperture"></p>
+            <p id="lensPrice"></p>
+        </div>
+
+        <div id="renderedImage" class="rendered-image"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const select = document.getElementById('lensSelect');
+            const details = document.getElementById('lensDetails');
+            const renderButton = document.getElementById('renderButton');
+            const renderedImage = document.getElementById('renderedImage');
+            const nameElement = document.getElementById('lensName');
+            const focalLengthElement = document.getElementById('lensFocalLength');
+            const apertureElement = document.getElementById('lensAperture');
+            const priceElement = document.getElementById('lensPrice');
+
+            let selectedLens = null;
+
+            // Fetch lenses from the API
+            try {
+                const response = await fetch('/lenses');
+                const lenses = await response.json();
+
+                // Populate the dropdown
+                lenses.forEach(lens => {
+                    const option = document.createElement('option');
+                    option.value = lens.id;
+                    option.textContent = `${lens.name} - ${lens.focal_length} ${lens.aperture}`;
+                    option.dataset.lens = JSON.stringify(lens);
+                    select.appendChild(option);
+                });
+
+                // Handle lens selection
+                select.addEventListener('change', (event) => {
+                    const selectedOption = event.target.selectedOptions[0];
+                    if (selectedOption.value) {
+                        selectedLens = JSON.parse(selectedOption.dataset.lens);
+                        
+                        // Update details
+                        nameElement.textContent = selectedLens.name;
+                        focalLengthElement.textContent = `Focal Length: ${selectedLens.focal_length}`;
+                        apertureElement.textContent = `Aperture: ${selectedLens.aperture}`;
+                        priceElement.textContent = `Price: $${selectedLens.price}`;
+                        
+                        // Show details and enable render button
+                        details.style.display = 'block';
+                        renderButton.disabled = false;
+                    } else {
+                        details.style.display = 'none';
+                        renderButton.disabled = true;
+                        selectedLens = null;
+                    }
+                    // Clear previous rendered image
+                    renderedImage.innerHTML = '';
+                });
+
+                // Handle render button click
+                renderButton.addEventListener('click', async () => {
+                    if (selectedLens) {
+                        try {
+                            const response = await fetch(`/image/${selectedLens.focal_length}`);
+                            const blob = await response.blob();
+                            const imageUrl = URL.createObjectURL(blob);
+                            
+                            // Display the rendered image
+                            renderedImage.innerHTML = `<img src="${imageUrl}" alt="Rendered focal length">`;
+                        } catch (error) {
+                            console.error('Error rendering image:', error);
+                        }
+                    }
+                });
+
+            } catch (error) {
+                console.error('Error fetching lenses:', error);
+            }
+        });
+    </script>
+</body>
+</html> 
